@@ -87,9 +87,9 @@
         // Function to fetch price from Birdeye
         async function getPrice(address) {
             try {
-                const res = await fetch(`https://public-api.birdeye.so/public/price?address=${address}`, {
-                    headers: { 'X-Chain': 'solana' }
-                    { 'Authorization': '2d7b608dbe534839904aa3943afb97ae' }
+                const res = await fetch('https://public-api.birdeye.so/defi/price?ui_amount_mode=raw', {
+                    headers: { 'X-Chain': 'solana'
+                             'X-API-KEY': '2d7b608dbe534839904aa3943afb97ae'}
                 });
                 const data = await res.json();
                 return data.data?.value || 'N/A';
