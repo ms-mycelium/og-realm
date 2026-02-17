@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>OG Realm Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+</head>
+
+<body class="bg-black text-white min-h-screen p-10">
+
+  <h1 class="text-4xl font-bold mb-10">OG Realm Dashboard</h1>
+
+  <div class="grid grid-cols-3 gap-8 mb-16">
+
+    <div class="bg-zinc-900 p-6 rounded-xl">
+      <h2 class="text-lg opacity-60">Token A</h2>
+      <div id="priceA" class="text-2xl mt-2">$—</div>
+    </div>
+
+    <div class="bg-zinc-900 p-6 rounded-xl">
+      <h2 class="text-lg opacity-60">Token B</h2>
+      <div id="priceB" class="text-2xl mt-2">$—</div>
+    </div>
+
+    <div class="bg-zinc-900 p-6 rounded-xl">
+      <h2 class="text-lg opacity-60">Token C</h2>
+      <div id="priceC" class="text-2xl mt-2">$—</div>
+    </div>
+
+  </div>
+
+  <canvas id="chart" height="100"></canvas>
+
+<script>
+
+// ========= CONFIG =========
+
+// Replace these with your actual token mint addresses
+const TOKENS = {
+  A: "So11111111111111111111111111111111111111112", // SOL
+  B: "Es9vMFrzaCERcB7KxgYsJhBKt3vnDnNQfXDSBxPTsC8G", // USDT
+  C: "EPjFWdd5AufqSSqeM2qRk6p9Z8uQ7Xw3C6A9F8S9Z8v"  // USDC
+};
+
+// USDC mint (for pricing)
+const USDC = "EPjFWdd5AufqSSqeM2qRk6p9Z8uQ7Xw3C6A9F8S9Z8v";
+
+// ============================
+
+
+// Get price using Jupiter quote API
+async function getPrice(tokenMint) {
+  try {
+
+    // 1 token (assumes 9 decimals typical SPL)
+    const amount = 1_000_000_000;
+
+    const res = await fetch(
+      `https://quote-api.jup.ag/v6/quote?inputMint=${tokenMint}&outputMint=${USDC}&amount=${amount}&slippageBps=50`
+    );
+
+    if (!res.ok) throw new Error("Quote failed");
+
+    const data = await res.json();
+
+    if (!data.outAmount) return "—";
+
+    // USDC has 6 decimals
+    const price = data.outAmount / 1_000_000;
+
+    return price.toFixed(4);
+
+  } catch (err) {
+    console.log("Price fetch error:", err);
+    return "—";
+  }
+}
+
+
+// Render prices
+async function loadPrices() {
+
+  document.getElementById("priceA").innerText =
+    "$" + await getPrice(TOKENS.A);
+
+  document.getElementById("priceB").innerText =
+    "$" + await getPrice(TOKENS.B);
+
+  document.getElementById("priceC").innerText =
+    "$" + await getPrice(TOKENS.C);
+}
+
+
+// Simple chart (demo using live polling)
+async function renderChart() {
+
+  const ctx = document.getElementById("chart").getContext("2d");
+
+  const labels = [];
+  const values = [];
+
+  for (let i = 0; i < 10; i++) {
+    const price = await getPrice(TOKENS.A);
+    labels.push(new Date());
+    values.push(price);
+  }
+
+  new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Token A Price",
+        data: values,
+        borderColor: "white",
+        tension: 0.3
+      }]
+    },
+    options: {
+      scales: {
+        x: {
+          type: "time",
+          time: {
+            unit: "minute"
+          }
+        }
+      }
+    }
+  });
+}
+
+
+// Init
+(async function() {
+  await loadPrices();
+  await renderChart();
+})();
+
+</script>
+
+</body>
+</html>
