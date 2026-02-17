@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OG Realm Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { transition: background-color 0.3s ease; }
+        header, footer { transition: background-color 0.3s ease; }
+        .card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .card:hover { transform: scale(1.05); box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15); }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-white dark:bg-gray-800 shadow-md p-4 flex justify-between items-center">
+        <h1 class="text-2xl font-bold">OG Realm Dashboard</h1>
+        <button id="theme-toggle" class="px-4 py-2 bg-blue-500 text-white rounded">Toggle Dark Mode</button>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6">
+        <!-- Token Prices Section -->
+        <section class="mb-12">
+            <h2 class="text-3xl font-bold mb-6">Token Prices & Market Data</h2>
+            <div id="token-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </section>
+
+        <!-- Charts Section -->
+        <section class="mb-12">
+            <h2 class="text-3xl font-bold mb-6">Price Charts (Last 24 Hours)</h2>
+            <div id="charts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </section>
+
+        <!-- Swap Interface Section -->
+        <section>
+            <h2 class="text-3xl font-bold mb-6">Unique Swap Interface</h2>
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+                <p class="mb-4">Swap between Realm tokens (internal pairs) or with SOL (eternal/external pairs). Quotes powered by Jupiter Aggregator.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block mb-2">From Token:</label>
+                        <select id="from-token" class="w-full p-2 border rounded dark:bg-gray-700"></select>
+                    </div>
+                    <div>
+                        <label class="block mb-2">To Token:</label>
+                        <select id="to-token" class="w-full p-2 border rounded dark:bg-gray-700"></select>
+                    </div>
+                    <div>
+                        <label class="block mb-2">Amount:</label>
+                        <input id="swap-amount" type="number" class="w-full p-2 border rounded dark:bg-gray-700" placeholder="Enter amount">
+                    </div>
+                    <div class="flex items-end">
+                        <button id="get-quote" class="px-4 py-2 bg-green-500 text-white rounded">Get Quote</button>
+                    </div>
+                </div>
+                <p id="swap-result" class="mt-4"></p>
+                <button id="execute-swap" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hidden">Execute Swap on Jupiter</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-gray-800 p-4 text-center shadow-md mt-auto">
+        <p>&copy; 2026 OG Realm Dashboard | Data from Birdeye & Jupiter</p>
+    </footer>
+
+    <script>
+        // Token Data (including SOL for eternal pairs)
+        const tokens = [
+            { name: 'OG Realm', symbol: 'OGR', address: '6BDG2QQvCaavLcK3HZ4218VeLY5E7YfBfDTTYortUad5', decimals: 9 },
+            { name: 'OG Matter', symbol: 'OGM', address: 'F9og9QxJRmCh51gYBd27nhtvMgCR6mmotJu9Rcp9BEWn', decimals: 9 },
+            { name: 'OG Alchemy', symbol: 'OGA', address: 'DyQqJJir6Y685wxECbPkmtveJjgxYcxyry1H2ToCb6vx', decimals: 9 },
+            { name: 'OG Gold', symbol: 'OGG', address: '5gJg5ci3T7Kn5DLW4AQButdacHJtvADp7jJfNsLbRc1k', decimals: 9 },
+            { name: 'OG Coin', symbol: 'OGC', address: 'DH5JRsRyu3RJnxXYBiZUJcwQ9Fkb562ebwUsufpZhy45', decimals: 7 },
+            { name: 'OG Fool', symbol: 'OGF', address: 'EQyRaajDZLEEdSrU8Hws29LWjDJczGKB1CV6jrWcZJn9', decimals: 4 },
+            { name: 'Solana', symbol: 'SOL', address: 'So11111111111111111111111111111111111111112', decimals: 9 } // For eternal pairs
+        ];
+
+        // Dark Mode Toggle
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            document.body.classList.toggle('dark');
+        });
+
+        // Function to fetch price from Birdeye
+        async function getPrice(address) {
+            try {
+                const res = await fetch(`https://public-api.birdeye.so/public/price?address=${address}`, {
+                    headers: { 'X-Chain': 'solana' }
+                });
+                const data = await res.json();
+                return data.data?.value || 'N/A';
+            } catch (e) {
+                return 'Error';
+            }
+        }
+
+        // Function to fetch market data from Birdeye
+        async function getMarketData(address) {
+            try {
+                const res = await fetch(`https://public-api.birdeye.so/defi/token_overview?address=${address}`, {
+                    headers: { 'X-Chain': 'solana' }
+                });
+                const data = await res.json();
+                return {
+                    mc: data.data?.mc || 'N/A',
+                    volume: data.data?.v24hUSD || 'N/A',
+                    liquidity: data.data?.liquidity || 'N/A'
+                };
+            } catch (e) {
+                return { mc: 'Error', volume: 'Error', liquidity: 'Error' };
+            }
+        }
+
+        // Function to fetch 24h price history
+        async function getPriceHistory(address) {
+            const now = Math.floor(Date.now() / 1000);
+            const start = now - 86400; // 24 hours ago
+            try {
+                const res = await fetch(`https://public-api.birdeye.so/public/history_price?address=${address}&type=15m&time_from=${start}&time_to=${now}`, {
+                    headers: { 'X-Chain': 'solana' }
+                });
+                const data = await res.json();
+                return data.data?.items?.map(item => ({ x: new Date(item.unixTime * 1000), y: item.value })) || [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        // Render Token Cards
+        async function renderTokens() {
+            const container = document.getElementById('token-cards');
+            for (const token of tokens.slice(0, 6)) { // Only Realm tokens for prices
+                const price = await getPrice(token.address);
+                const market = await getMarketData(token.address);
+                const card = `
+                    <div class="card bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+                        <h3 class="text-xl font-semibold mb-2">${token.name} (${token.symbol})</h3>
+                        <p class="text-2xl mb-2">$${price}</p>
+                        <p>Market Cap: $${market.mc}</p>
+                        <p>24h Volume: $${market.volume}</p>
+                        <p>Liquidity: $${market.liquidity}</p>
+                    </div>
+                `;
+                container.innerHTML += card;
+            }
+        }
+
+        // Render Charts
+        async function renderCharts() {
+            const container = document.getElementById('charts-grid');
+            for (const token of tokens.slice(0, 6)) {
+                const history = await getPriceHistory(token.address);
+                const chartDiv = document.createElement('div');
+                chartDiv.className = 'bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg';
+                chartDiv.innerHTML = `
+                    <h3 class="text-xl font-semibold mb-4">${token.name} Price Chart</h3>
+                    <canvas id="chart-${token.symbol}"></canvas>
+                `;
+                container.appendChild(chartDiv);
+
+                const ctx = document.getElementById(`chart-${token.symbol}`).getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'Price (USD)',
+                            data: history,
+                            borderColor: 'rgba(59, 130, 246, 0.8)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: { type: 'time', time: { unit: 'hour' } },
+                            y: { beginAtZero: false }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Populate Swap Selects
+        function populateSwaps() {
+            const fromSelect = document.getElementById('from-token');
+            const toSelect = document.getElementById('to-token');
+            tokens.forEach(token => {
+                const option = `<option value="${JSON.stringify(token)}">${token.name} (${token.symbol})</option>`;
+                fromSelect.innerHTML += option;
+                toSelect.innerHTML += option;
+            });
+        }
+
+        // Get Swap Quote
+        document.getElementById('get-quote').addEventListener('click', async () => {
+            const from = JSON.parse(document.getElementById('from-token').value);
+            const to = JSON.parse(document.getElementById('to-token').value);
+            const amount = parseFloat(document.getElementById('swap-amount').value);
+            if (!amount || from.address === to.address) {
+                document.getElementById('swap-result').textContent = 'Invalid input or same tokens.';
+                return;
+            }
+
+            const inputAmount = amount * (10 ** from.decimals);
+            try {
+                const res = await fetch(`https://quote-api.jup.ag/v6/quote?inputMint=${from.address}&outputMint=${to.address}&amount=${inputAmount}&slippageBps=50`);
+                const data = await res.json();
+                const output = data.outAmount / (10 ** to.decimals);
+                document.getElementById('swap-result').textContent = `Estimated Output: ${output.toFixed(6)} ${to.symbol}`;
+                
+                const executeBtn = document.getElementById('execute-swap');
+                executeBtn.classList.remove('hidden');
+                executeBtn.onclick = () => {
+                    window.open(`https://jup.ag/swap/${from.address}-${to.address}?inputAmount=${amount}`, '_blank');
+                };
+            } catch (e) {
+                document.getElementById('swap-result').textContent = 'Error fetching quote.';
+            }
+        });
+
+        // Initialize
+        populateSwaps();
+        renderTokens();
+        renderCharts();
+    </script>
+</body>
+</html>
