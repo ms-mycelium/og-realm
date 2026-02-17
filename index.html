@@ -1,232 +1,415 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OG Realm Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body { transition: background-color 0.3s ease; }
-        header, footer { transition: background-color 0.3s ease; }
-        .card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-        .card:hover { transform: scale(1.05); box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15); }
-    </style>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2685.3">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; -webkit-text-stroke: #000000}
+    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; -webkit-text-stroke: #000000; min-height: 14.0px}
+    span.s1 {font-kerning: none}
+  </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col">
-    <!-- Header -->
-    <header class="bg-white dark:bg-gray-800 shadow-md p-4 flex justify-between items-center">
-        <h1 class="text-2xl font-bold">OG Realm Dashboard</h1>
-        <button id="theme-toggle" class="px-4 py-2 bg-blue-500 text-white rounded">Toggle Dark Mode</button>
-    </header>
-
-    <!-- Main Content -->
-    <main class="flex-1 p-6">
-        <!-- Token Prices Section -->
-        <section class="mb-12">
-            <h2 class="text-3xl font-bold mb-6">Token Prices & Market Data</h2>
-            <div id="token-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-        </section>
-
-        <!-- Charts Section -->
-        <section class="mb-12">
-            <h2 class="text-3xl font-bold mb-6">Price Charts (Last 24 Hours)</h2>
-            <div id="charts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-        </section>
-
-        <!-- Swap Interface Section -->
-        <section>
-            <h2 class="text-3xl font-bold mb-6">Unique Swap Interface</h2>
-            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-                <p class="mb-4">Swap between Realm tokens (internal pairs) or with SOL (eternal/external pairs). Quotes powered by Jupiter Aggregator.</p>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block mb-2">From Token:</label>
-                        <select id="from-token" class="w-full p-2 border rounded dark:bg-gray-700"></select>
-                    </div>
-                    <div>
-                        <label class="block mb-2">To Token:</label>
-                        <select id="to-token" class="w-full p-2 border rounded dark:bg-gray-700"></select>
-                    </div>
-                    <div>
-                        <label class="block mb-2">Amount:</label>
-                        <input id="swap-amount" type="number" class="w-full p-2 border rounded dark:bg-gray-700" placeholder="Enter amount">
-                    </div>
-                    <div class="flex items-end">
-                        <button id="get-quote" class="px-4 py-2 bg-green-500 text-white rounded">Get Quote</button>
-                    </div>
-                </div>
-                <p id="swap-result" class="mt-4"></p>
-                <button id="execute-swap" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hidden">Execute Swap on Jupiter</button>
-            </div>
-        </section>
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-white dark:bg-gray-800 p-4 text-center shadow-md mt-auto">
-        <p>&copy; 2026 OG Realm Dashboard | Data from Birdeye & Jupiter</p>
-    </footer>
-
-    <script>
-        // Token Data (including SOL for eternal pairs)
-        const tokens = [
-            { name: 'OG Realm', symbol: 'OGR', address: '6BDG2QQvCaavLcK3HZ4218VeLY5E7YfBfDTTYortUad5', decimals: 9 },
-            { name: 'OG Matter', symbol: 'OGM', address: 'F9og9QxJRmCh51gYBd27nhtvMgCR6mmotJu9Rcp9BEWn', decimals: 9 },
-            { name: 'OG Alchemy', symbol: 'OGA', address: 'DyQqJJir6Y685wxECbPkmtveJjgxYcxyry1H2ToCb6vx', decimals: 9 },
-            { name: 'OG Gold', symbol: 'OGG', address: '5gJg5ci3T7Kn5DLW4AQButdacHJtvADp7jJfNsLbRc1k', decimals: 9 },
-            { name: 'OG Coin', symbol: 'OGC', address: 'DH5JRsRyu3RJnxXYBiZUJcwQ9Fkb562ebwUsufpZhy45', decimals: 7 },
-            { name: 'OG Fool', symbol: 'OGF', address: 'EQyRaajDZLEEdSrU8Hws29LWjDJczGKB1CV6jrWcZJn9', decimals: 4 },
-            { name: 'Solana', symbol: 'SOL', address: 'So11111111111111111111111111111111111111112', decimals: 9 } // For eternal pairs
-        ];
-
-        // Dark Mode Toggle
-        document.getElementById('theme-toggle').addEventListener('click', () => {
-            document.body.classList.toggle('dark');
-        });
-
-        // Function to fetch price from Birdeye
-        async function getPrice(address) {
-            try {
-                const res = await fetch(`https://public-api.birdeye.so/public/price?address=${address}`, {
-                    headers: { 'X-Chain': 'solana' }
-                });
-                const data = await res.json();
-                return data.data?.value || 'N/A';
-            } catch (e) {
-                return 'Error';
-            }
-        }
-
-        // Function to fetch market data from Birdeye
-        async function getMarketData(address) {
-            try {
-                const res = await fetch(`https://public-api.birdeye.so/defi/token_overview?address=${address}`, {
-                    headers: { 'X-Chain': 'solana' }
-                });
-                const data = await res.json();
-                return {
-                    mc: data.data?.mc || 'N/A',
-                    volume: data.data?.v24hUSD || 'N/A',
-                    liquidity: data.data?.liquidity || 'N/A'
-                };
-            } catch (e) {
-                return { mc: 'Error', volume: 'Error', liquidity: 'Error' };
-            }
-        }
-
-        // Function to fetch 24h price history
-        async function getPriceHistory(address) {
-            const now = Math.floor(Date.now() / 1000);
-            const start = now - 86400; // 24 hours ago
-            try {
-                const res = await fetch(`https://public-api.birdeye.so/public/history_price?address=${address}&type=15m&time_from=${start}&time_to=${now}`, {
-                    headers: { 'X-Chain': 'solana' }
-                });
-                const data = await res.json();
-                return data.data?.items?.map(item => ({ x: new Date(item.unixTime * 1000), y: item.value })) || [];
-            } catch (e) {
-                return [];
-            }
-        }
-
-        // Render Token Cards
-        async function renderTokens() {
-            const container = document.getElementById('token-cards');
-            for (const token of tokens.slice(0, 6)) { // Only Realm tokens for prices
-                const price = await getPrice(token.address);
-                const market = await getMarketData(token.address);
-                const card = `
-                    <div class="card bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-                        <h3 class="text-xl font-semibold mb-2">${token.name} (${token.symbol})</h3>
-                        <p class="text-2xl mb-2">$${price}</p>
-                        <p>Market Cap: $${market.mc}</p>
-                        <p>24h Volume: $${market.volume}</p>
-                        <p>Liquidity: $${market.liquidity}</p>
-                    </div>
-                `;
-                container.innerHTML += card;
-            }
-        }
-
-        // Render Charts
-        async function renderCharts() {
-            const container = document.getElementById('charts-grid');
-            for (const token of tokens.slice(0, 6)) {
-                const history = await getPriceHistory(token.address);
-                const chartDiv = document.createElement('div');
-                chartDiv.className = 'bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg';
-                chartDiv.innerHTML = `
-                    <h3 class="text-xl font-semibold mb-4">${token.name} Price Chart</h3>
-                    <canvas id="chart-${token.symbol}"></canvas>
-                `;
-                container.appendChild(chartDiv);
-
-                const ctx = document.getElementById(`chart-${token.symbol}`).getContext('2d');
-                new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        datasets: [{
-                            label: 'Price (USD)',
-                            data: history,
-                            borderColor: 'rgba(59, 130, 246, 0.8)',
-                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                            tension: 0.4,
-                            fill: true
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            x: { type: 'time', time: { unit: 'hour' } },
-                            y: { beginAtZero: false }
-                        }
-                    }
-                });
-            }
-        }
-
-        // Populate Swap Selects
-        function populateSwaps() {
-            const fromSelect = document.getElementById('from-token');
-            const toSelect = document.getElementById('to-token');
-            tokens.forEach(token => {
-                const option = `<option value="${JSON.stringify(token)}">${token.name} (${token.symbol})</option>`;
-                fromSelect.innerHTML += option;
-                toSelect.innerHTML += option;
-            });
-        }
-
-        // Get Swap Quote
-        document.getElementById('get-quote').addEventListener('click', async () => {
-            const from = JSON.parse(document.getElementById('from-token').value);
-            const to = JSON.parse(document.getElementById('to-token').value);
-            const amount = parseFloat(document.getElementById('swap-amount').value);
-            if (!amount || from.address === to.address) {
-                document.getElementById('swap-result').textContent = 'Invalid input or same tokens.';
-                return;
-            }
-
-            const inputAmount = amount * (10 ** from.decimals);
-            try {
-                const res = await fetch(`https://quote-api.jup.ag/v6/quote?inputMint=${from.address}&outputMint=${to.address}&amount=${inputAmount}&slippageBps=50`);
-                const data = await res.json();
-                const output = data.outAmount / (10 ** to.decimals);
-                document.getElementById('swap-result').textContent = `Estimated Output: ${output.toFixed(6)} ${to.symbol}`;
-                
-                const executeBtn = document.getElementById('execute-swap');
-                executeBtn.classList.remove('hidden');
-                executeBtn.onclick = () => {
-                    window.open(`https://jup.ag/swap/${from.address}-${to.address}?inputAmount=${amount}`, '_blank');
-                };
-            } catch (e) {
-                document.getElementById('swap-result').textContent = 'Error fetching quote.';
-            }
-        });
-
-        // Initialize
-        populateSwaps();
-        renderTokens();
-        renderCharts();
-    </script>
+<body>
+<p class="p1"><span class="s1">&lt;!DOCTYPE html&gt;</span></p>
+<p class="p1"><span class="s1">&lt;html lang="en"&gt;</span></p>
+<p class="p1"><span class="s1">&lt;head&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;meta charset="UTF-8"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;title&gt;OG Realm Dashboard 🔱&lt;/title&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;script src="https://cdn.tailwindcss.com"&gt;&lt;/script&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;script src="https://cdn.jsdelivr.net/npm/chart.js"&gt;&lt;/script&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;style&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>body {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>font-family: 'Inter', sans-serif;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>transition: background-color 0.4s ease;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.tab-button {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>position: relative;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.tab-button.active {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>color: #c4b5fd;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.tab-button.active:after {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>content: '';</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>position: absolute;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>bottom: -1px;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>left: 0;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>width: 100%;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>height: 3px;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>background: linear-gradient(to right, #8b5cf6, #ec4899);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>border-radius: 9999px;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.realm-card {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.realm-card:hover {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>transform: translateY(-8px) scale(1.02);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>box-shadow: 0 25px 50px -12px rgb(139 92 246 / 0.25);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>.glow-purple {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>box-shadow: 0 0 25px -5px rgb(167 139 250), 0 0 10px -5px rgb(236 72 153);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;/style&gt;</span></p>
+<p class="p1"><span class="s1">&lt;/head&gt;</span></p>
+<p class="p1"><span class="s1">&lt;body class="bg-zinc-950 text-zinc-200 min-h-screen"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;!-- HEADER --&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;header class="sticky top-0 z-50 border-b border-violet-950 bg-black/80 backdrop-blur-lg"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;div class="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;div class="flex items-center gap-x-4"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-3xl"&gt;🔱&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;h1 class="text-3xl font-bold tracking-tighter"&gt;OG REALM&lt;/h1&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;p class="text-xs text-violet-400 -mt-1"&gt;DASHBOARD&lt;/p&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;button id="theme-toggle" class="px-5 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-violet-500 rounded-2xl flex items-center gap-2 text-sm font-medium"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;i class="fas fa-moon"&gt;&lt;/i&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;span&gt;Dark&lt;/span&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;/button&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;/header&gt;</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;div class="max-w-7xl mx-auto px-6 py-8"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;!-- TABS NAV --&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;div class="flex border-b border-zinc-800 mb-10 overflow-x-auto hide-scrollbar"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;button onclick="switchTab(0)" id="tab-0" class="tab-button active px-10 py-5 text-lg font-semibold flex-shrink-0"&gt;📊 Prices &amp; Charts&lt;/button&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;button onclick="switchTab(1)" id="tab-1" class="tab-button px-10 py-5 text-lg font-semibold flex-shrink-0"&gt;💧 Liquidity Deep Dive&lt;/button&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;button onclick="switchTab(2)" id="tab-2" class="tab-button px-10 py-5 text-lg font-semibold flex-shrink-0"&gt;👑 Important Wallets&lt;/button&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;button onclick="switchTab(3)" id="tab-3" class="tab-button px-10 py-5 text-lg font-semibold flex-shrink-0"&gt;🔄 Realm Swap&lt;/button&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;!-- TAB 1: PRICES + CHARTS --&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;div id="content-0" class="tab-content"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;div class="mb-12"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;h2 class="text-4xl font-bold mb-2"&gt;Token Prices &amp; Market Data&lt;/h2&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;p class="text-zinc-400"&gt;Real-time from Birdeye • 6 Realm Tokens&lt;/p&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;div id="token-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"&gt;&lt;/div&gt;</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;div class="mt-16"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;h2 class="text-3xl font-bold mb-8 flex items-center gap-3"&gt;24h Price Charts&lt;/h2&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div id="charts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"&gt;&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;!-- TAB 2: LIQUIDITY DEEP DIVE --&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;div id="content-1" class="tab-content hidden"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;div class="mb-12"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;h2 class="text-4xl font-bold mb-2"&gt;Liquidity Pools Deep Dive&lt;/h2&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;p class="text-zinc-400"&gt;Total liquidity across all pools • Powered by Birdeye + Meteora/Raydium&lt;/p&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;div id="liquidity-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6"&gt;&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;!-- TAB 3: IMPORTANT WALLETS --&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;div id="content-2" class="tab-content hidden"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;div class="mb-12"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;h2 class="text-4xl font-bold mb-2"&gt;Important Wallets in the Realm&lt;/h2&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;p class="text-zinc-400"&gt;Treasury • Repurchase programs • Top holders&lt;/p&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;div class="grid md:grid-cols-2 gap-8"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;!-- Known Realm Wallets --&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div class="bg-zinc-900/70 border border-violet-900 rounded-3xl p-8 glow-purple"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;h3 class="text-xl font-semibold mb-6 flex items-center gap-2"&gt;&lt;i class="fas fa-vault"&gt;&lt;/i&gt; Official Realm Wallets&lt;/h3&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;div class="space-y-6"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;div class="flex justify-between items-center"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                                </span>&lt;p class="font-mono text-sm text-emerald-400"&gt;OG Mine (Repurchase)&lt;/p&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                                </span>&lt;p class="text-xs text-zinc-500"&gt;oggzGFTgRM61YmhEbgWeivVmQx8bSAdBvsPGqN3ZfxN&lt;/p&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;button onclick="copyWallet('oggzGFTgRM61YmhEbgWeivVmQx8bSAdBvsPGqN3ZfxN')" class="text-xs px-3 py-1 bg-zinc-800 hover:bg-zinc-700 rounded-xl"&gt;Copy&lt;/button&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;div class="flex justify-between items-center"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                                </span>&lt;p class="font-mono text-sm text-emerald-400"&gt;OG Reserve (Repurchase)&lt;/p&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                                </span>&lt;p class="text-xs text-zinc-500"&gt;9amqn5HuK6554dnAEQWJMMGTyrQBVWzKzt9vdVGTBwKo&lt;/p&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;button onclick="copyWallet('9amqn5HuK6554dnAEQWJMMGTyrQBVWzKzt9vdVGTBwKo')" class="text-xs px-3 py-1 bg-zinc-800 hover:bg-zinc-700 rounded-xl"&gt;Copy&lt;/button&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;!-- Top Holders --&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div class="bg-zinc-900/70 border border-violet-900 rounded-3xl p-8 glow-purple"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;h3 class="text-xl font-semibold mb-6"&gt;Top Holders (OGR example)&lt;/h3&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;div id="top-holders-list" class="space-y-4 text-sm"&gt;&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;!-- TAB 4: SWAP --&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;div id="content-3" class="tab-content hidden"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;div class="max-w-xl mx-auto"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div class="bg-gradient-to-br from-zinc-900 to-black border border-violet-800 rounded-3xl p-10 glow-purple"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;h2 class="text-4xl font-bold mb-2 text-center"&gt;Realm Token Swap&lt;/h2&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;p class="text-center text-zinc-400 mb-10"&gt;Internal Realm pairs • Eternal SOL pairs • Jupiter powered&lt;/p&gt;</span></p>
+<p class="p2"><span class="s1"><span class="Apple-converted-space">                    </span></span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;div class="space-y-8"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;label class="block text-xs uppercase tracking-widest text-zinc-500 mb-2"&gt;From&lt;/label&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;select id="from-token" class="w-full bg-zinc-950 border border-zinc-700 focus:border-violet-500 rounded-2xl px-6 py-5 text-lg"&gt;&lt;/select&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;/div&gt;</span></p>
+<p class="p2"><span class="s1"><span class="Apple-converted-space">                        </span></span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;div class="flex justify-center -my-2"&gt;&lt;i class="fas fa-arrows-up-down text-3xl text-violet-500"&gt;&lt;/i&gt;&lt;/div&gt;</span></p>
+<p class="p2"><span class="s1"><span class="Apple-converted-space">                        </span></span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;label class="block text-xs uppercase tracking-widest text-zinc-500 mb-2"&gt;To&lt;/label&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;select id="to-token" class="w-full bg-zinc-950 border border-zinc-700 focus:border-violet-500 rounded-2xl px-6 py-5 text-lg"&gt;&lt;/select&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;/div&gt;</span></p>
+<p class="p2"><span class="s1"><span class="Apple-converted-space">                        </span></span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;label class="block text-xs uppercase tracking-widest text-zinc-500 mb-2"&gt;Amount&lt;/label&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;input id="swap-amount" type="number" step="0.0001" class="w-full bg-zinc-950 border border-zinc-700 focus:border-violet-500 rounded-2xl px-6 py-5 text-lg" placeholder="0.00"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;/div&gt;</span></p>
+<p class="p2"><span class="s1"><span class="Apple-converted-space">                        </span></span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;button id="get-quote" class="w-full py-6 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-2xl text-xl font-semibold hover:brightness-110 transition"&gt;Get Quote&lt;/button&gt;</span></p>
+<p class="p2"><span class="s1"><span class="Apple-converted-space">                        </span></span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;div id="swap-result" class="text-center min-h-[28px] text-emerald-400 font-medium"&gt;&lt;/div&gt;</span></p>
+<p class="p2"><span class="s1"><span class="Apple-converted-space">                        </span></span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;button id="execute-swap" class="w-full py-6 bg-white text-black rounded-2xl text-xl font-semibold hidden hover:bg-zinc-100"&gt;Execute Swap on Jupiter →&lt;/button&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;footer class="border-t border-zinc-800 py-8 text-center text-xs text-zinc-500 mt-20"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>Data from Birdeye.so &amp;amp; Jupiter.ag • Built for OG Realm • 2026</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;/footer&gt;</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;script&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>const tokens = [</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>{ name: 'OG Realm', symbol: 'OGR', address: '6BDG2QQvCaavLcK3HZ4218VeLY5E7YfBfDTTYortUad5', decimals: 9 },</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>{ name: 'OG Matter', symbol: 'OGM', address: 'F9og9QxJRmCh51gYBd27nhtvMgCR6mmotJu9Rcp9BEWn', decimals: 9 },</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>{ name: 'OG Alchemy', symbol: 'OGA', address: 'DyQqJJir6Y685wxECbPkmtveJjgxYcxyry1H2ToCb6vx', decimals: 9 },</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>{ name: 'OG Gold', symbol: 'OGG', address: '5gJg5ci3T7Kn5DLW4AQButdacHJtvADp7jJfNsLbRc1k', decimals: 9 },</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>{ name: 'OG Coin', symbol: 'OGC', address: 'DH5JRsRyu3RJnxXYBiZUJcwQ9Fkb562ebwUsufpZhy45', decimals: 7 },</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>{ name: 'OG Fool', symbol: 'OGF', address: 'EQyRaajDZLEEdSrU8Hws29LWjDJczGKB1CV6jrWcZJn9', decimals: 4 }</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>];</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>const allTokens = [...tokens, { name: 'Solana', symbol: 'SOL', address: 'So11111111111111111111111111111111111111112', decimals: 9 }];</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>let charts = {};</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>// Tailwind script already loaded</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>function switchTab(n) {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>document.querySelectorAll('.tab-content').forEach(el =&gt; el.classList.add('hidden'));</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>document.getElementById(`content-${n}`).classList.remove('hidden');</span></p>
+<p class="p2"><span class="s1"><span class="Apple-converted-space">            </span></span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>document.querySelectorAll('.tab-button').forEach((btn, i) =&gt; {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>btn.classList.toggle('active', i === n);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>});</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>async function getPrice(address) {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>try {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const res = await fetch(`https://public-api.birdeye.so/public/price?address=${address}`, { headers: { 'X-Chain': 'solana' } });</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const json = await res.json();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>return json.data?.value?.toFixed(6) || '—';</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>} catch { return '—'; }</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>async function getMarketData(address) {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>try {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const res = await fetch(`https://public-api.birdeye.so/defi/token_overview?address=${address}`, { headers: { 'X-Chain': 'solana' } });</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const json = await res.json();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>return json.data || {};</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>} catch { return {}; }</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>async function getPriceHistory(address) {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>const now = Math.floor(Date.now() / 1000);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>const start = now - 86400;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>try {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const res = await fetch(`https://public-api.birdeye.so/public/history_price?address=${address}&amp;type=15m&amp;time_from=${start}&amp;time_to=${now}`, { headers: { 'X-Chain': 'solana' } });</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const json = await res.json();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>return json.data?.items?.map(i =&gt; ({x: new Date(i.unixTime * 1000), y: i.value})) || [];</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>} catch { return []; }</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>async function renderTokenCards() {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>const container = document.getElementById('token-cards');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>container.innerHTML = '';</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>for (const token of tokens) {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const price = await getPrice(token.address);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const m = await getMarketData(token.address);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const cardHTML = `</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;div class="realm-card bg-zinc-900 border border-violet-900 rounded-3xl p-8 glow-purple"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;div class="flex justify-between items-start mb-6"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                                </span>&lt;div class="font-mono text-xs text-violet-400"&gt;${token.symbol}&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                                </span>&lt;div class="text-2xl font-bold"&gt;${token.name}&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;div class="text-right"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                                </span>&lt;div class="text-3xl font-semibold"&gt;$${price}&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;div class="grid grid-cols-3 gap-4 text-xs"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;div&gt;&lt;span class="text-zinc-400"&gt;MC&lt;/span&gt;&lt;br&gt;$${Number(m.mc || 0).toLocaleString()}&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;div&gt;&lt;span class="text-zinc-400"&gt;24h Vol&lt;/span&gt;&lt;br&gt;$${Number(m.v24hUSD || 0).toLocaleString()}&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;div&gt;&lt;span class="text-zinc-400"&gt;Liq&lt;/span&gt;&lt;br&gt;$${Number(m.liquidity || 0).toLocaleString()}&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>`;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>container.innerHTML += cardHTML;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>async function renderCharts() {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>const container = document.getElementById('charts-grid');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>container.innerHTML = '';</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>for (const token of tokens) {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const history = await getPriceHistory(token.address);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const div = document.createElement('div');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>div.className = 'realm-card bg-zinc-900 border border-violet-900 rounded-3xl p-6 glow-purple';</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>div.innerHTML = `</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;div class="flex items-center gap-3 mb-6"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;span class="font-mono text-violet-400"&gt;${token.symbol}&lt;/span&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;span class="text-lg"&gt;${token.name}&lt;/span&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;canvas id="chart-${token.symbol}" class="h-60"&gt;&lt;/canvas&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>`;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>container.appendChild(div);</span></p>
+<p class="p2"><span class="s1"><span class="Apple-converted-space">                </span></span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const ctx = document.getElementById(`chart-${token.symbol}`).getContext('2d');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>charts[token.symbol] = new Chart(ctx, {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>type: 'line',</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>data: { datasets: [{ label: 'Price USD', data: history, borderColor: '#a5b4fc', tension: 0.4, fill: true, backgroundColor: 'rgba(165, 180, 252, 0.1)' }] },</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { type: 'time', time: { unit: 'hour' } }, y: { grid: { color: '#27272a' } } } }</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>});</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>async function renderLiquidityDeepDive() {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>const container = document.getElementById('liquidity-grid');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>container.innerHTML = '';</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>for (const token of tokens) {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const data = await getMarketData(token.address);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const liq = Number(data.liquidity || 0).toLocaleString();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const vol = Number(data.v24hUSD || 0).toLocaleString();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const html = `</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;div class="realm-card bg-zinc-900 border border-violet-900 rounded-3xl p-8 glow-purple flex flex-col"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;div class="flex justify-between mb-8"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                                </span>&lt;div class="font-mono text-violet-400"&gt;${token.symbol}&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                                </span>&lt;div class="text-3xl font-bold"&gt;${token.name}&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;div class="text-right"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                                </span>&lt;div class="text-5xl font-semibold text-emerald-400"&gt;$${liq}&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                                </span>&lt;div class="text-xs text-zinc-400"&gt;TOTAL LIQUIDITY&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;div class="text-sm mb-6"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>24h Volume: &lt;span class="font-mono"&gt;$${vol}&lt;/span&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;a href="https://birdeye.so/token/${token.address}?chain=solana" target="_blank"<span class="Apple-converted-space"> </span></span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                           </span>class="mt-auto inline-flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-500 transition py-4 rounded-2xl text-sm font-medium"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;i class="fas fa-external-link-alt"&gt;&lt;/i&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>DEEP DIVE ON BIRDEYE (ALL POOLS)</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>&lt;/a&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>`;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>container.innerHTML += html;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>async function renderTopHolders() {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>const container = document.getElementById('top-holders-list');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>container.innerHTML = '&lt;div class="text-zinc-400 text-sm"&gt;Loading top holders...&lt;/div&gt;';</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>try {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const res = await fetch(`https://public-api.birdeye.so/defi/v3/token/holder?address=6BDG2QQvCaavLcK3HZ4218VeLY5E7YfBfDTTYortUad5&amp;offset=0&amp;limit=5`, {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>headers: { 'X-Chain': 'solana' }</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>});</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const json = await res.json();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>let html = '';</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>if (json.data?.items?.length) {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>json.data.items.forEach(item =&gt; {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>html += `</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;div class="flex justify-between items-center text-xs font-mono"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                                </span>&lt;div class="truncate max-w-[220px]"&gt;${item.owner.slice(0,12)}...${item.owner.slice(-8)}&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                                </span>&lt;div class="text-emerald-400"&gt;${Number(item.ui_amount).toLocaleString()}&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                            </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                        </span>`;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>});</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>} else {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>html = '&lt;div class="text-amber-400"&gt;No holder data available (rate limit or API change)&lt;/div&gt;';</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>container.innerHTML = html;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>} catch {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>container.innerHTML = '&lt;div class="text-amber-400"&gt;Holder data temporarily unavailable&lt;/div&gt;';</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>function populateSwaps() {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>const from = document.getElementById('from-token');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>const to = document.getElementById('to-token');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>allTokens.forEach(t =&gt; {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const opt = `&lt;option value='${JSON.stringify(t)}'&gt;${t.name} (${t.symbol})&lt;/option&gt;`;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>from.innerHTML += opt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>to.innerHTML += opt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>});</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>document.getElementById('get-quote').addEventListener('click', async () =&gt; {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>const from = JSON.parse(document.getElementById('from-token').value);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>const to = JSON.parse(document.getElementById('to-token').value);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>const amount = parseFloat(document.getElementById('swap-amount').value) || 0;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>if (amount &lt;= 0 || from.address === to.address) {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>document.getElementById('swap-result').textContent = 'Invalid selection or amount';</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>return;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>const inputAmount = Math.floor(amount * Math.pow(10, from.decimals));</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>try {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const res = await fetch(`https://quote-api.jup.ag/v6/quote?inputMint=${from.address}&amp;outputMint=${to.address}&amp;amount=${inputAmount}&amp;slippageBps=50`);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const quote = await res.json();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const out = (quote.outAmount / Math.pow(10, to.decimals)).toFixed(6);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>document.getElementById('swap-result').innerHTML = `≈ &lt;span class="font-bold"&gt;${out}&lt;/span&gt; ${to.symbol}`;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>const execBtn = document.getElementById('execute-swap');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>execBtn.classList.remove('hidden');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>execBtn.onclick = () =&gt; window.open(`https://jup.ag/swap/${from.address}-${to.address}?inputAmount=${amount}`, '_blank');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>} catch(e) {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>document.getElementById('swap-result').textContent = 'Quote unavailable';</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>});</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>function copyWallet(addr) {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>navigator.clipboard.writeText(addr);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>const toast = document.createElement('div');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>toast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-xs px-6 py-3 rounded-2xl';</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>toast.textContent = 'Wallet copied!';</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>document.body.appendChild(toast);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>setTimeout(() =&gt; toast.remove(), 1800);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>// Dark mode toggle</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>document.getElementById('theme-toggle').addEventListener('click', () =&gt; {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>document.documentElement.classList.toggle('dark');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>const icon = document.querySelector('#theme-toggle i');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>if (document.documentElement.classList.contains('dark')) {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>icon.classList.replace('fa-moon', 'fa-sun');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>} else {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>icon.classList.replace('fa-sun', 'fa-moon');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>});</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>// INIT</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>async function initDashboard() {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>await renderTokenCards();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>await renderCharts();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>await renderLiquidityDeepDive();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>await renderTopHolders();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>populateSwaps();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>switchTab(0); // start on Overview</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>window.onload = initDashboard;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>&lt;/script&gt;</span></p>
+<p class="p1"><span class="s1">&lt;/body&gt;</span></p>
+<p class="p1"><span class="s1">&lt;/html&gt;</span></p>
 </body>
 </html>
