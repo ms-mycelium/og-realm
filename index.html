@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OG Realm Dashboard 🔱</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.4s ease;
+        }
+        .tab-button {
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tab-button.active {
+            color: #c4b5fd;
+        }
+        .tab-button.active:after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(to right, #8b5cf6, #ec4899);
+            border-radius: 9999px;
+        }
+        .realm-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .realm-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 25px 50px -12px rgb(139 92 246 / 0.25);
+        }
+        .glow-purple {
+            box-shadow: 0 0 25px -5px rgb(167 139 250), 0 0 10px -5px rgb(236 72 153);
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200 min-h-screen">
+    <!-- HEADER -->
+    <header class="sticky top-0 z-50 border-b border-violet-950 bg-black/80 backdrop-blur-lg">
+        <div class="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
+            <div class="flex items-center gap-x-4">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-3xl">🔱</div>
+                <div>
+                    <h1 class="text-3xl font-bold tracking-tighter">OG REALM</h1>
+                    <p class="text-xs text-violet-400 -mt-1">DASHBOARD</p>
+                </div>
+            </div>
+            <button id="theme-toggle" class="px-5 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-violet-500 rounded-2xl flex items-center gap-2 text-sm font-medium">
+                <i class="fas fa-moon"></i>
+                <span>Dark</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-6 py-8">
+        <!-- TABS NAV -->
+        <div class="flex border-b border-zinc-800 mb-10 overflow-x-auto hide-scrollbar">
+            <button onclick="switchTab(0)" id="tab-0" class="tab-button active px-10 py-5 text-lg font-semibold flex-shrink-0">📊 Prices & Charts</button>
+            <button onclick="switchTab(1)" id="tab-1" class="tab-button px-10 py-5 text-lg font-semibold flex-shrink-0">💧 Liquidity Deep Dive</button>
+            <button onclick="switchTab(2)" id="tab-2" class="tab-button px-10 py-5 text-lg font-semibold flex-shrink-0">👑 Important Wallets</button>
+            <button onclick="switchTab(3)" id="tab-3" class="tab-button px-10 py-5 text-lg font-semibold flex-shrink-0">🔄 Realm Swap</button>
+        </div>
+
+        <!-- TAB 1: PRICES + CHARTS -->
+        <div id="content-0" class="tab-content">
+            <div class="mb-12">
+                <h2 class="text-4xl font-bold mb-2">Token Prices & Market Data</h2>
+                <p class="text-zinc-400">Real-time from Birdeye • 6 Realm Tokens</p>
+            </div>
+            <div id="token-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+            <div class="mt-16">
+                <h2 class="text-3xl font-bold mb-8 flex items-center gap-3">24h Price Charts</h2>
+                <div id="charts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
+        </div>
+
+        <!-- TAB 2: LIQUIDITY DEEP DIVE -->
+        <div id="content-1" class="tab-content hidden">
+            <div class="mb-12">
+                <h2 class="text-4xl font-bold mb-2">Liquidity Pools Deep Dive</h2>
+                <p class="text-zinc-400">Total liquidity across all pools • Powered by Birdeye + Meteora/Raydium</p>
+            </div>
+            <div id="liquidity-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6"></div>
+        </div>
+
+        <!-- TAB 3: IMPORTANT WALLETS -->
+        <div id="content-2" class="tab-content hidden">
+            <div class="mb-12">
+                <h2 class="text-4xl font-bold mb-2">Important Wallets in the Realm</h2>
+                <p class="text-zinc-400">Treasury • Repurchase programs • Top holders</p>
+            </div>
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Known Realm Wallets -->
+                <div class="bg-zinc-900/70 border border-violet-900 rounded-3xl p-8 glow-purple">
+                    <h3 class="text-xl font-semibold mb-6 flex items-center gap-2"><i class="fas fa-vault"></i> Official Realm Wallets</h3>
+                    <div class="space-y-6">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="font-mono text-sm text-emerald-400">OG Mine (Repurchase)</p>
+                                <p class="text-xs text-zinc-500">oggzGFTgRM61YmhEbgWeivVmQx8bSAdBvsPGqN3ZfxN</p>
+                            </div>
+                            <button onclick="copyWallet('oggzGFTgRM61YmhEbgWeivVmQx8bSAdBvsPGqN3ZfxN')" class="text-xs px-3 py-1 bg-zinc-800 hover:bg-zinc-700 rounded-xl">Copy</button>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="font-mono text-sm text-emerald-400">OG Reserve (Repurchase)</p>
+                                <p class="text-xs text-zinc-500">9amqn5HuK6554dnAEQWJMMGTyrQBVWzKzt9vdVGTBwKo</p>
+                            </div>
+                            <button onclick="copyWallet('9amqn5HuK6554dnAEQWJMMGTyrQBVWzKzt9vdVGTBwKo')" class="text-xs px-3 py-1 bg-zinc-800 hover:bg-zinc-700 rounded-xl">Copy</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Holders -->
+                <div class="bg-zinc-900/70 border border-violet-900 rounded-3xl p-8 glow-purple">
+                    <h3 class="text-xl font-semibold mb-6">Top Holders (OGR example)</h3>
+                    <div id="top-holders-list" class="space-y-4 text-sm"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: SWAP -->
+        <div id="content-3" class="tab-content hidden">
+            <div class="max-w-xl mx-auto">
+                <div class="bg-gradient-to-br from-zinc-900 to-black border border-violet-800 rounded-3xl p-10 glow-purple">
+                    <h2 class="text-4xl font-bold mb-2 text-center">Realm Token Swap</h2>
+                    <p class="text-center text-zinc-400 mb-10">Internal Realm pairs • Eternal SOL pairs • Jupiter powered</p>
+                    
+                    <div class="space-y-8">
+                        <div>
+                            <label class="block text-xs uppercase tracking-widest text-zinc-500 mb-2">From</label>
+                            <select id="from-token" class="w-full bg-zinc-950 border border-zinc-700 focus:border-violet-500 rounded-2xl px-6 py-5 text-lg"></select>
+                        </div>
+                        
+                        <div class="flex justify-center -my-2"><i class="fas fa-arrows-up-down text-3xl text-violet-500"></i></div>
+                        
+                        <div>
+                            <label class="block text-xs uppercase tracking-widest text-zinc-500 mb-2">To</label>
+                            <select id="to-token" class="w-full bg-zinc-950 border border-zinc-700 focus:border-violet-500 rounded-2xl px-6 py-5 text-lg"></select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs uppercase tracking-widest text-zinc-500 mb-2">Amount</label>
+                            <input id="swap-amount" type="number" step="0.0001" class="w-full bg-zinc-950 border border-zinc-700 focus:border-violet-500 rounded-2xl px-6 py-5 text-lg" placeholder="0.00">
+                        </div>
+                        
+                        <button id="get-quote" class="w-full py-6 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-2xl text-xl font-semibold hover:brightness-110 transition">Get Quote</button>
+                        
+                        <div id="swap-result" class="text-center min-h-[28px] text-emerald-400 font-medium"></div>
+                        
+                        <button id="execute-swap" class="w-full py-6 bg-white text-black rounded-2xl text-xl font-semibold hidden hover:bg-zinc-100">Execute Swap on Jupiter →</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="border-t border-zinc-800 py-8 text-center text-xs text-zinc-500 mt-20">
+        Data from Birdeye.so &amp; Jupiter.ag • Built for OG Realm • 2026
+    </footer>
+
+    <script>
+        const tokens = [
+            { name: 'OG Realm', symbol: 'OGR', address: '6BDG2QQvCaavLcK3HZ4218VeLY5E7YfBfDTTYortUad5', decimals: 9 },
+            { name: 'OG Matter', symbol: 'OGM', address: 'F9og9QxJRmCh51gYBd27nhtvMgCR6mmotJu9Rcp9BEWn', decimals: 9 },
+            { name: 'OG Alchemy', symbol: 'OGA', address: 'DyQqJJir6Y685wxECbPkmtveJjgxYcxyry1H2ToCb6vx', decimals: 9 },
+            { name: 'OG Gold', symbol: 'OGG', address: '5gJg5ci3T7Kn5DLW4AQButdacHJtvADp7jJfNsLbRc1k', decimals: 9 },
+            { name: 'OG Coin', symbol: 'OGC', address: 'DH5JRsRyu3RJnxXYBiZUJcwQ9Fkb562ebwUsufpZhy45', decimals: 7 },
+            { name: 'OG Fool', symbol: 'OGF', address: 'EQyRaajDZLEEdSrU8Hws29LWjDJczGKB1CV6jrWcZJn9', decimals: 4 }
+        ];
+        const allTokens = [...tokens, { name: 'Solana', symbol: 'SOL', address: 'So11111111111111111111111111111111111111112', decimals: 9 }];
+
+        let charts = {};
+
+        // Tailwind script already loaded
+        function switchTab(n) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`content-${n}`).classList.remove('hidden');
+            
+            document.querySelectorAll('.tab-button').forEach((btn, i) => {
+                btn.classList.toggle('active', i === n);
+            });
+        }
+
+        async function getPrice(address) {
+            try {
+                const res = await fetch(`https://public-api.birdeye.so/public/price?address=${address}`, { headers: { 'X-Chain': 'solana' } });
+                const json = await res.json();
+                return json.data?.value?.toFixed(6) || '—';
+            } catch { return '—'; }
+        }
+
+        async function getMarketData(address) {
+            try {
+                const res = await fetch(`https://public-api.birdeye.so/defi/token_overview?address=${address}`, { headers: { 'X-Chain': 'solana' } });
+                const json = await res.json();
+                return json.data || {};
+            } catch { return {}; }
+        }
+
+        async function getPriceHistory(address) {
+            const now = Math.floor(Date.now() / 1000);
+            const start = now - 86400;
+            try {
+                const res = await fetch(`https://public-api.birdeye.so/public/history_price?address=${address}&type=15m&time_from=${start}&time_to=${now}`, { headers: { 'X-Chain': 'solana' } });
+                const json = await res.json();
+                return json.data?.items?.map(i => ({x: new Date(i.unixTime * 1000), y: i.value})) || [];
+            } catch { return []; }
+        }
+
+        async function renderTokenCards() {
+            const container = document.getElementById('token-cards');
+            container.innerHTML = '';
+            for (const token of tokens) {
+                const price = await getPrice(token.address);
+                const m = await getMarketData(token.address);
+                const cardHTML = `
+                    <div class="realm-card bg-zinc-900 border border-violet-900 rounded-3xl p-8 glow-purple">
+                        <div class="flex justify-between items-start mb-6">
+                            <div>
+                                <div class="font-mono text-xs text-violet-400">${token.symbol}</div>
+                                <div class="text-2xl font-bold">${token.name}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-3xl font-semibold">$${price}</div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4 text-xs">
+                            <div><span class="text-zinc-400">MC</span><br>$${Number(m.mc || 0).toLocaleString()}</div>
+                            <div><span class="text-zinc-400">24h Vol</span><br>$${Number(m.v24hUSD || 0).toLocaleString()}</div>
+                            <div><span class="text-zinc-400">Liq</span><br>$${Number(m.liquidity || 0).toLocaleString()}</div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += cardHTML;
+            }
+        }
+
+        async function renderCharts() {
+            const container = document.getElementById('charts-grid');
+            container.innerHTML = '';
+            for (const token of tokens) {
+                const history = await getPriceHistory(token.address);
+                const div = document.createElement('div');
+                div.className = 'realm-card bg-zinc-900 border border-violet-900 rounded-3xl p-6 glow-purple';
+                div.innerHTML = `
+                    <div class="flex items-center gap-3 mb-6">
+                        <span class="font-mono text-violet-400">${token.symbol}</span>
+                        <span class="text-lg">${token.name}</span>
+                    </div>
+                    <canvas id="chart-${token.symbol}" class="h-60"></canvas>
+                `;
+                container.appendChild(div);
+                
+                const ctx = document.getElementById(`chart-${token.symbol}`).getContext('2d');
+                charts[token.symbol] = new Chart(ctx, {
+                    type: 'line',
+                    data: { datasets: [{ label: 'Price USD', data: history, borderColor: '#a5b4fc', tension: 0.4, fill: true, backgroundColor: 'rgba(165, 180, 252, 0.1)' }] },
+                    options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { type: 'time', time: { unit: 'hour' } }, y: { grid: { color: '#27272a' } } } }
+                });
+            }
+        }
+
+        async function renderLiquidityDeepDive() {
+            const container = document.getElementById('liquidity-grid');
+            container.innerHTML = '';
+            for (const token of tokens) {
+                const data = await getMarketData(token.address);
+                const liq = Number(data.liquidity || 0).toLocaleString();
+                const vol = Number(data.v24hUSD || 0).toLocaleString();
+                const html = `
+                    <div class="realm-card bg-zinc-900 border border-violet-900 rounded-3xl p-8 glow-purple flex flex-col">
+                        <div class="flex justify-between mb-8">
+                            <div>
+                                <div class="font-mono text-violet-400">${token.symbol}</div>
+                                <div class="text-3xl font-bold">${token.name}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-5xl font-semibold text-emerald-400">$${liq}</div>
+                                <div class="text-xs text-zinc-400">TOTAL LIQUIDITY</div>
+                            </div>
+                        </div>
+                        <div class="text-sm mb-6">
+                            24h Volume: <span class="font-mono">$${vol}</span>
+                        </div>
+                        <a href="https://birdeye.so/token/${token.address}?chain=solana" target="_blank" 
+                           class="mt-auto inline-flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-500 transition py-4 rounded-2xl text-sm font-medium">
+                            <i class="fas fa-external-link-alt"></i>
+                            DEEP DIVE ON BIRDEYE (ALL POOLS)
+                        </a>
+                    </div>
+                `;
+                container.innerHTML += html;
+            }
+        }
+
+        async function renderTopHolders() {
+            const container = document.getElementById('top-holders-list');
+            container.innerHTML = '<div class="text-zinc-400 text-sm">Loading top holders...</div>';
+            try {
+                const res = await fetch(`https://public-api.birdeye.so/defi/v3/token/holder?address=6BDG2QQvCaavLcK3HZ4218VeLY5E7YfBfDTTYortUad5&offset=0&limit=5`, {
+                    headers: { 'X-Chain': 'solana' }
+                });
+                const json = await res.json();
+                let html = '';
+                if (json.data?.items?.length) {
+                    json.data.items.forEach(item => {
+                        html += `
+                            <div class="flex justify-between items-center text-xs font-mono">
+                                <div class="truncate max-w-[220px]">${item.owner.slice(0,12)}...${item.owner.slice(-8)}</div>
+                                <div class="text-emerald-400">${Number(item.ui_amount).toLocaleString()}</div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html = '<div class="text-amber-400">No holder data available (rate limit or API change)</div>';
+                }
+                container.innerHTML = html;
+            } catch {
+                container.innerHTML = '<div class="text-amber-400">Holder data temporarily unavailable</div>';
+            }
+        }
+
+        function populateSwaps() {
+            const from = document.getElementById('from-token');
+            const to = document.getElementById('to-token');
+            allTokens.forEach(t => {
+                const opt = `<option value='${JSON.stringify(t)}'>${t.name} (${t.symbol})</option>`;
+                from.innerHTML += opt;
+                to.innerHTML += opt;
+            });
+        }
+
+        document.getElementById('get-quote').addEventListener('click', async () => {
+            const from = JSON.parse(document.getElementById('from-token').value);
+            const to = JSON.parse(document.getElementById('to-token').value);
+            const amount = parseFloat(document.getElementById('swap-amount').value) || 0;
+            if (amount <= 0 || from.address === to.address) {
+                document.getElementById('swap-result').textContent = 'Invalid selection or amount';
+                return;
+            }
+            const inputAmount = Math.floor(amount * Math.pow(10, from.decimals));
+            try {
+                const res = await fetch(`https://quote-api.jup.ag/v6/quote?inputMint=${from.address}&outputMint=${to.address}&amount=${inputAmount}&slippageBps=50`);
+                const quote = await res.json();
+                const out = (quote.outAmount / Math.pow(10, to.decimals)).toFixed(6);
+                document.getElementById('swap-result').innerHTML = `≈ <span class="font-bold">${out}</span> ${to.symbol}`;
+                const execBtn = document.getElementById('execute-swap');
+                execBtn.classList.remove('hidden');
+                execBtn.onclick = () => window.open(`https://jup.ag/swap/${from.address}-${to.address}?inputAmount=${amount}`, '_blank');
+            } catch(e) {
+                document.getElementById('swap-result').textContent = 'Quote unavailable';
+            }
+        });
+
+        function copyWallet(addr) {
+            navigator.clipboard.writeText(addr);
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-xs px-6 py-3 rounded-2xl';
+            toast.textContent = 'Wallet copied!';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 1800);
+        }
+
+        // Dark mode toggle
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            const icon = document.querySelector('#theme-toggle i');
+            if (document.documentElement.classList.contains('dark')) {
+                icon.classList.replace('fa-moon', 'fa-sun');
+            } else {
+                icon.classList.replace('fa-sun', 'fa-moon');
+            }
+        });
+
+        // INIT
+        async function initDashboard() {
+            await renderTokenCards();
+            await renderCharts();
+            await renderLiquidityDeepDive();
+            await renderTopHolders();
+            populateSwaps();
+            switchTab(0); // start on Overview
+        }
+
+        window.onload = initDashboard;
+    </script>
+</body>
+</html>
