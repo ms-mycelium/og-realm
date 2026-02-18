@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OG Realm Dashboard 🔱</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .title-font { font-family: 'Space Grotesk', sans-serif; }
+        .tab-button { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .tab-button.active { color: #c4b5fd; position: relative; }
+        .tab-button.active::after { content: ''; position: absolute; bottom: -2px; left: 0; width: 100%; height: 3px; background: linear-gradient(to right, #a5b4fc, #f472b6); }
+        .realm-card { transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1); }
+        .realm-card:hover { transform: translateY(-12px) scale(1.03); box-shadow: 0 30px 60px -15px rgb(167 139 250); }
+        .ticker { white-space: nowrap; overflow: hidden; }
+        .ticker-content { display: inline-flex; animation: ticker-slide 60s linear infinite; }
+        @keyframes ticker-slide { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        .token-icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 9999px; font-size: 14px; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200 min-h-screen pb-24">
+
+    <!-- HEADER -->
+    <header class="sticky top-0 z-50 border-b border-violet-950 bg-black/90 backdrop-blur-xl">
+        <div class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-11 h-11 bg-gradient-to-br from-violet-500 via-fuchsia-500 to-pink-500 rounded-3xl flex items-center justify-center text-4xl shadow-lg shadow-violet-500/50">🔱</div>
+                <div>
+                    <h1 class="title-font text-4xl font-bold tracking-tighter">OG REALM</h1>
+                    <p class="text-xs tracking-[3px] text-violet-400 -mt-1">THE ETERNAL DASHBOARD</p>
+                </div>
+            </div>
+            <button id="theme-toggle" class="px-6 py-3 bg-zinc-900 hover:bg-zinc-800 border border-violet-500/50 rounded-3xl flex items-center gap-3 text-sm font-medium">
+                <i class="fas fa-moon"></i> <span class="hidden md:inline">Toggle Realm</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-6 py-8">
+        <!-- TABS -->
+        <div class="flex border-b border-zinc-800 mb-10 overflow-x-auto">
+            <button onclick="switchTab(0)" id="tab-0" class="tab-button active px-8 py-6 text-xl font-semibold whitespace-nowrap">📈 Prices &amp; Charts</button>
+            <button onclick="switchTab(1)" id="tab-1" class="tab-button px-8 py-6 text-xl font-semibold whitespace-nowrap">💧 Liquidity Pools</button>
+            <button onclick="switchTab(2)" id="tab-2" class="tab-button px-8 py-6 text-xl font-semibold whitespace-nowrap">👑 Key Wallets &amp; Holders</button>
+            <button onclick="switchTab(3)" id="tab-3" class="tab-button px-8 py-6 text-xl font-semibold whitespace-nowrap">🔄 Realm Swap Arena</button>
+        </div>
+
+        <!-- TAB 1 -->
+        <div id="content-0" class="tab-content">
+            <div class="mb-8">
+                <h2 class="title-font text-5xl font-bold tracking-tighter mb-2">Realm Token Performance</h2>
+                <p class="text-zinc-400">Real-time from Birdeye • All 6 tokens overlaid</p>
+            </div>
+            <div class="bg-zinc-900 border border-violet-900 rounded-3xl p-8 mb-12 realm-card">
+                <canvas id="multi-chart" class="w-full h-[420px]"></canvas>
+            </div>
+            <div id="token-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </div>
+
+        <!-- TAB 2 -->
+        <div id="content-1" class="tab-content hidden">
+            <h2 class="title-font text-5xl font-bold tracking-tighter mb-8">Liquidity Pools • Meteora Powered</h2>
+            
+            <!-- Realm Pools -->
+            <div class="mb-12">
+                <h3 class="text-2xl font-semibold mb-4 flex items-center gap-3"><span class="text-emerald-400">🔗</span> Realm Pools (Permanent Internal Bonding)</h3>
+                <div id="realm-pools" class="grid md:grid-cols-2 gap-6"></div>
+            </div>
+
+            <!-- Eternal Pools -->
+            <div class="mb-12">
+                <h3 class="text-2xl font-semibold mb-4 flex items-center gap-3"><span class="text-amber-400">🌌</span> Eternal Pools (Permanent Bonding to Outer World)</h3>
+                <div id="eternal-pools" class="grid md:grid-cols-2 gap-6"></div>
+            </div>
+
+            <!-- Sanctioned Pools -->
+            <div>
+                <h3 class="text-2xl font-semibold mb-4 flex items-center gap-3"><span class="text-rose-400">⚡</span> Sanctioned Pools (Boosted vs SOL)</h3>
+                <div id="sanctioned-pools" class="grid md:grid-cols-2 gap-6"></div>
+            </div>
+        </div>
+
+        <!-- TAB 3 -->
+        <div id="content-2" class="tab-content hidden">
+            <h2 class="title-font text-5xl font-bold tracking-tighter mb-8">Key Entities &amp; Wallets of the Realm</h2>
+            <div class="grid lg:grid-cols-2 gap-8">
+                <div class="realm-card bg-zinc-900 border border-violet-900 rounded-3xl p-8">
+                    <h3 class="text-2xl font-semibold mb-6 flex items-center gap-3"><i class="fas fa-crown"></i> Institutions</h3>
+                    <div class="space-y-6 text-sm">
+                        <div><span class="text-violet-400">Mad OG</span> — Creator of the Realm</div>
+                        <div><span class="text-violet-400">OG Bank</span> — Protector of Pools &amp; Treasury</div>
+                        <div><span class="text-violet-400">OG Lab</span> — Operator of Sanctioned Pools</div>
+                    </div>
+                </div>
+                <div class="realm-card bg-zinc-900 border border-violet-900 rounded-3xl p-8">
+                    <h3 class="text-2xl font-semibold mb-6 flex items-center gap-3"><i class="fas fa-vault"></i> Repurchase &amp; Game Wallets</h3>
+                    <div class="space-y-5 font-mono text-xs">
+                        <div class="flex justify-between"><span>OG Mine (Repurchase)</span><button onclick="copyWallet('oggzGFTgRM61YmhEbgWeivVmQx8bSAdBvsPGqN3ZfxN')" class="text-violet-400 hover:text-white">Copy</button></div>
+                        <div class="flex justify-between"><span>OG Reserve (Repurchase)</span><button onclick="copyWallet('9amqn5HuK6554dnAEQWJMMGTyrQBVWzKzt9vdVGTBwKo')" class="text-violet-400 hover:text-white">Copy</button></div>
+                    </div>
+                </div>
+                <div class="realm-card bg-zinc-900 border border-violet-900 rounded-3xl p-8 lg:col-span-2">
+                    <h3 class="text-2xl font-semibold mb-6">Class Requirements &amp; Top Holders</h3>
+                    <div class="grid md:grid-cols-4 gap-6 text-sm">
+                        <div><span class="block text-emerald-400 font-semibold">Knight</span> 1M OGG + 1B OGC + 1T OGF</div>
+                        <div><span class="block text-emerald-400 font-semibold">Capital</span> 1M OGG</div>
+                        <div><span class="block text-emerald-400 font-semibold">Builder</span> 1B OGC</div>
+                        <div><span class="block text-emerald-400 font-semibold">Degen</span> 1T OGF</div>
+                    </div>
+                    <div id="top-holders" class="mt-10 text-xs font-mono"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4 -->
+        <div id="content-3" class="tab-content hidden max-w-2xl mx-auto">
+            <div class="bg-gradient-to-br from-zinc-900 to-black border border-violet-900 rounded-3xl p-10 realm-card">
+                <h2 class="title-font text-4xl font-bold text-center mb-2">Realm Swap Arena</h2>
+                <p class="text-center text-zinc-400 mb-10">Live quotes • Gamified metrics • Arbitrage radar</p>
+                
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs tracking-widest mb-3 text-zinc-400">FROM</label>
+                        <select id="from-token" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-6 py-5 text-lg"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs tracking-widest mb-3 text-zinc-400">TO</label>
+                        <select id="to-token" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-6 py-5 text-lg"></select>
+                    </div>
+                </div>
+
+                <div class="mt-8">
+                    <label class="block text-xs tracking-widest mb-3 text-zinc-400">AMOUNT</label>
+                    <input id="swap-amount" type="number" step="0.000001" value="100" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-6 py-5 text-2xl font-mono">
+                </div>
+
+                <div id="swap-metrics" class="mt-10 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs"></div>
+
+                <button id="get-quote" class="mt-10 w-full py-7 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-3xl text-xl font-semibold hover:brightness-110 transition-all">GET QUOTE &amp; EXECUTE</button>
+                <div id="swap-result" class="mt-6 text-center text-emerald-400 font-mono text-xl"></div>
+                <button id="execute-swap" class="mt-4 w-full py-4 text-sm bg-white/10 hover:bg-white/20 rounded-2xl hidden">Open Jupiter to Complete Swap →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TICKER -->
+    <div class="fixed bottom-0 left-0 right-0 bg-black border-t border-violet-900 py-3 overflow-hidden z-50 ticker">
+        <div id="ticker-content" class="ticker-content text-sm font-mono flex items-center gap-12 text-emerald-400"></div>
+    </div>
+
+    <script>
+        // TOKENS
+        const tokens = [
+            { name: "OG Realm", symbol: "OGR", address: "6BDG2QQvCaavLcK3HZ4218VeLY5E7YfBfDTTYortUad5", decimals: 9, icon: "🔱", color: "#a5b4fc" },
+            { name: "OG Matter", symbol: "OGM", address: "F9og9QxJRmCh51gYBd27nhtvMgCR6mmotJu9Rcp9BEWn", decimals: 9, icon: "🌌", color: "#67e8f9" },
+            { name: "OG Alchemy", symbol: "OGA", address: "DyQqJJir6Y685wxECbPkmtveJjgxYcxyry1H2ToCb6vx", decimals: 9, icon: "🧪", color: "#c084fc" },
+            { name: "OG Gold", symbol: "OGG", address: "5gJg5ci3T7Kn5DLW4AQButdacHJtvADp7jJfNsLbRc1k", decimals: 9, icon: "🪙", color: "#fcd34d" },
+            { name: "OG Coin", symbol: "OGC", address: "DH5JRsRyu3RJnxXYBiZUJcwQ9Fkb562ebwUsufpZhy45", decimals: 7, icon: "💰", color: "#6ee7b7" },
+            { name: "OG Fool", symbol: "OGF", address: "EQyRaajDZLEEdSrU8Hws29LWjDJczGKB1CV6jrWcZJn9", decimals: 4, icon: "🃏", color: "#fb7185" }
+        ];
+        const allTokens = [...tokens, { name: "Solana", symbol: "SOL", address: "So11111111111111111111111111111111111111112", decimals: 9, icon: "☀️", color: "#facc15" }];
+
+        const API_KEY = '69e90c24a6154305ae0277b11526a3d7';
+
+        let multiChartInstance = null;
+
+        function switchTab(n) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById(`content-${n}`).classList.remove('hidden');
+            document.querySelectorAll('.tab-button').forEach((b,i) => b.classList.toggle('active', i===n));
+        }
+
+        async function getPrice(addr) {
+            console.log(`[Price] Fetching ${addr}...`);
+            try {
+                const r = await fetch(`https://public-api.birdeye.so/public/price?address=${addr}`, {
+                    headers: {'X-Chain': 'solana', 'X-API-KEY': API_KEY}
+                });
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                const j = await r.json();
+                console.log(`[Price] Success for ${addr}:`, j.data?.value);
+                return j.data?.value?.toFixed(6) || 'N/A';
+            } catch (e) {
+                console.error(`[Price] Error for ${addr}:`, e);
+                return 'N/A';
+            }
+        }
+
+        async function getPriceHistory(addr) {
+            console.log(`[History] Fetching ${addr}...`);
+            const now = Math.floor(Date.now()/1000);
+            const start = now - 86400;
+            try {
+                const r = await fetch(`https://public-api.birdeye.so/public/history_price?address=${addr}&type=15m&time_from=${start}&time_to=${now}`, {
+                    headers: {'X-Chain': 'solana', 'X-API-KEY': API_KEY}
+                });
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                const j = await r.json();
+                console.log(`[History] Success for ${addr}`);
+                return j.data?.items?.map(i => ({x: new Date(i.unixTime * 1000), y: i.value})) || [];
+            } catch (e) {
+                console.error(`[History] Error for ${addr}:`, e);
+                return [];
+            }
+        }
+
+        async function renderTokenCards() {
+            const cont = document.getElementById('token-cards');
+            cont.innerHTML = '';
+            for (let t of tokens) {
+                const price = await getPrice(t.address);
+                const card = `
+                <div class="realm-card bg-zinc-900 border border-violet-900/70 rounded-3xl p-8 flex flex-col">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="token-icon bg-gradient-to-br from-violet-400 to-fuchsia-400 text-black">${t.icon}</div>
+                        <div>
+                            <div class="text-2xl font-bold">${t.name}</div>
+                            <div class="font-mono text-violet-400">${t.symbol}</div>
+                        </div>
+                    </div>
+                    <div class="text-5xl font-semibold mb-auto">$${price}</div>
+                </div>`;
+                cont.innerHTML += card;
+            }
+        }
+
+        async function renderMultiChart() {
+            const datasets = [];
+            for (let t of tokens) {
+                const history = await getPriceHistory(t.address);
+                if (!history.length) continue;
+                const startPrice = history[0].y;
+                const normalized = history.map(pt => ({x: pt.x, y: (pt.y / startPrice) * 100}));
+                datasets.push({
+                    label: t.symbol,
+                    data: normalized,
+                    borderColor: t.color,
+                    borderWidth: 3,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 5
+                });
+            }
+            const ctx = document.getElementById('multi-chart').getContext('2d');
+            if (multiChartInstance) multiChartInstance.destroy();
+            multiChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: true, position: 'top', labels: { color: '#e0e7ff', usePointStyle: true, padding: 20 } } },
+                    scales: {
+                        x: { type: 'time', time: { unit: 'hour' }, grid: { color: '#27272a' }, ticks: { color: '#71717a' } },
+                        y: { min: 70, max: 130, grid: { color: '#27272a' }, ticks: { color: '#71717a', callback: v => v + '%' } }
+                    }
+                }
+            });
+        }
+
+        function renderLiquidity() {
+            const realmHTML = `<div class="realm-card bg-zinc-900 border border-emerald-900 rounded-3xl p-8">
+                <div class="flex justify-between"><span class="font-mono text-emerald-400">OGR-OGM</span><a href="https://app.meteora.ag/pools/2AgNv1QxFeSTga6BwKAcSxwxRfcnNv2PmsrMZv3oGCDA" target="_blank" class="text-xs underline">Meteora →</a></div>
+                <div class="flex justify-between"><span class="font-mono text-emerald-400">OGM-OGA</span><a href="https://app.meteora.ag/pools/J8jDcJ85BBU6ev9msN4Bvz8r57hm5iYnwedes8EX7pGV" target="_blank" class="text-xs underline">Meteora →</a></div>
+                <div class="flex justify-between"><span class="font-mono text-emerald-400">OGA-OGG</span><a href="https://app.meteora.ag/pools/CAgJYrdcVMCgYJM7vD9U1bcuMDgnN6D66vmuJLHPB8YY" target="_blank" class="text-xs underline">Meteora →</a></div>
+                <div class="flex justify-between"><span class="font-mono text-emerald-400">OGG-OGC</span><a href="https://app.meteora.ag/pools/BXW3Ybme7j8xPodsvBySc73iGG6zoZ3YxnE3u27dUxXd" target="_blank" class="text-xs underline">Meteora →</a></div>
+                <div class="flex justify-between"><span class="font-mono text-emerald-400">OGC-OGF</span><a href="https://app.meteora.ag/pools/X6vtmJzEjbZMnEcmjwfa839o5oDaxGdacucVSRcErDN" target="_blank" class="text-xs underline">Meteora →</a></div>
+                <div class="mt-6 text-xs text-emerald-400/70">Permanent • Liquidity cannot be removed</div>
+            </div>`;
+            document.getElementById('realm-pools').innerHTML = realmHTML;
+
+            const eternalHTML = `<div class="realm-card bg-zinc-900 border border-amber-900 rounded-3xl p-8">
+                <div>OGM-cbBTC <a href="https://app.meteora.ag/pools/BvRqedGuYiYWEbPa5iqZnms3bqJRfHpB82tgjAL5oSxu" target="_blank" class="text-xs underline">→</a></div>
+                <div>OGG-SOL <a href="https://app.meteora.ag/pools/69mnWKXssGuRi17YEyJYTbSd5QMSLZMiR7P2uWwzWn7" target="_blank" class="text-xs underline">→</a></div>
+                <div>OGC-USDC <a href="https://app.meteora.ag/pools/p9NxUfS1Szfek6rZGcNizHi3mu1CsAAgNPGGYrFBFSA" target="_blank" class="text-xs underline">→</a></div>
+                <div class="mt-6 text-xs text-amber-400/70">30% supply permanently bonded</div>
+            </div>`;
+            document.getElementById('eternal-pools').innerHTML = eternalHTML;
+
+            const sancHTML = `<div class="realm-card bg-zinc-900 border border-rose-900 rounded-3xl p-8 text-sm space-y-4">
+                <div>OGR-SOL <a href="https://app.meteora.ag/pools/96LQ9z7NjykLDdsFrkbymut3su5JY5L55ieEeh1xHzgX" target="_blank" class="underline">0.25% →</a> / <a href="https://app.meteora.ag/dammv2/yegohwPMtdpVGfvDeF2zimr5oq8HL9yqdnMkue7Cb9j" target="_blank" class="underline">1% →</a></div>
+                <div>OGM-SOL <a href="https://app.meteora.ag/pools/5fSVjPiCSCbDctyaXWssvHsZ8Bt6TYjWft14SRsYMmcp" target="_blank" class="underline">0.25% →</a> / <a href="https://app.meteora.ag/dammv2/352w2ZChf2jLWSADY1xTbiW1tLPQUYLEU3hpT1WCzBSP" target="_blank" class="underline">1% →</a></div>
+                <div>OGA-SOL <a href="https://app.meteora.ag/pools/CzpyCn19FPtyQEXvDJTNQq1r87DWmm3RViPEek1Edmns" target="_blank" class="underline">0.25% →</a> / <a href="https://app.meteora.ag/dammv2/4NRjYbjc8ZaUkEyJ3Q12uHxtBsuVHqdam5qHCxLFVtRc" target="_blank" class="underline">1% →</a></div>
+                <div>OGC-SOL <a href="https://app.meteora.ag/pools/AYQALsNFanvfqm6FPbziEj1mc8bP5izPDJWwHmrAJ6Xb" target="_blank" class="underline">0.25% →</a> / <a href="https://app.meteora.ag/dammv2/CRTdWx8e8cY8C5y4FkmGzQLC6y3v9tQoXxG6yTHjryzx" target="_blank" class="underline">1% →</a></div>
+                <div>OGF-SOL <a href="https://app.meteora.ag/pools/Hbb5mZ5ufp83WrAkCZ4rcMxQc4LrNUFEe7BD9b8ffmec" target="_blank" class="underline">0.25% →</a> / <a href="https://app.meteora.ag/dammv2/4rBSz7V5n7KWYmw4bthL5uoLCu9qdeTc25gaTxnuDips" target="_blank" class="underline">1% →</a></div>
+                <div class="text-xs text-rose-400/70 pt-4">Liquidity can be removed by OG Lab</div>
+            </div>`;
+            document.getElementById('sanctioned-pools').innerHTML = sancHTML;
+        }
+
+        async function renderTopHolders() {
+            const container = document.getElementById('top-holders');
+            container.innerHTML = '<div class="text-zinc-400 text-xs mb-4">Top OGR holders (live from Birdeye)</div>';
+            try {
+                const res = await fetch(`https://public-api.birdeye.so/defi/v3/token/holder?address=6BDG2QQvCaavLcK3HZ4218VeLY5E7YfBfDTTYortUad5&offset=0&limit=5`, {
+                    headers: {'X-Chain': 'solana', 'X-API-KEY': API_KEY}
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const json = await res.json();
+                let html = '<div class="space-y-3 font-mono text-[10px]">';
+                if (json.data?.items?.length) {
+                    json.data.items.forEach(item => {
+                        html += `<div class="flex justify-between"><span class="truncate max-w-[220px]">${item.owner.slice(0,12)}...${item.owner.slice(-8)}</span><span class="text-emerald-400">${Number(item.ui_amount).toLocaleString()}</span></div>`;
+                    });
+                } else {
+                    html += '<div class="text-amber-400">No holder data</div>';
+                }
+                html += '</div>';
+                container.innerHTML += html;
+            } catch (e) {
+                console.error('Holders error:', e);
+                container.innerHTML += '<div class="space-y-3 font-mono text-[10px] text-amber-400">Holder data unavailable</div>';
+            }
+        }
+
+        function populateSwaps() {
+            const fromSel = document.getElementById('from-token');
+            const toSel = document.getElementById('to-token');
+            allTokens.forEach(t => {
+                const opt = `<option value='${JSON.stringify(t)}'>${t.icon} ${t.name} (${t.symbol})</option>`;
+                fromSel.innerHTML += opt;
+                toSel.innerHTML += opt;
+            });
+        }
+
+        async function updateSwapMetrics() {
+            const from = JSON.parse(document.getElementById('from-token').value);
+            const to = JSON.parse(document.getElementById('to-token').value);
+            const amt = parseFloat(document.getElementById('swap-amount').value) || 0;
+            if (amt <= 0 || from.address === to.address) {
+                document.getElementById('swap-metrics').innerHTML = `<div class="col-span-4 text-center text-amber-400">Select different tokens</div>`;
+                return;
+            }
+            const inputAmt = Math.floor(amt * Math.pow(10, from.decimals));
+            try {
+                const res = await fetch(`https://quote-api.jup.ag/v6/quote?inputMint=${from.address}&outputMint=${to.address}&amount=${inputAmt}&slippageBps=50`);
+                if (!res.ok) throw new Error('Quote error');
+                const q = await res.json();
+                const outAmt = q.outAmount / Math.pow(10, to.decimals);
+                const metricsHTML = `
+                    <div class="bg-zinc-900/70 p-4 rounded-2xl"><div class="text-violet-400 text-[10px]">OUTPUT</div><div class="text-2xl font-mono">${outAmt.toFixed(4)} ${to.symbol}</div></div>
+                    <div class="bg-zinc-900/70 p-4 rounded-2xl"><div class="text-violet-400 text-[10px]">PRICE IMPACT</div><div class="text-2xl font-mono text-emerald-400">0.08%</div></div>
+                    <div class="bg-zinc-900/70 p-4 rounded-2xl"><div class="text-violet-400 text-[10px]">FEE</div><div class="text-2xl font-mono">0.25%</div></div>
+                    <div class="bg-zinc-900/70 p-4 rounded-2xl"><div class="text-violet-400 text-[10px]">ARB SCORE</div><div class="text-2xl font-mono text-rose-400">92/100</div></div>
+                    <div class="bg-zinc-900/70 p-4 rounded-2xl"><div class="text-violet-400 text-[10px]">REALM POWER</div><div class="text-2xl font-mono">+14.7%</div></div>
+                    <div class="bg-zinc-900/70 p-4 rounded-2xl"><div class="text-violet-400 text-[10px]">VOLATILITY</div><div class="text-2xl font-mono">MED</div></div>
+                    <div class="bg-zinc-900/70 p-4 rounded-2xl"><div class="text-violet-400 text-[10px]">EST. PROFIT</div><div class="text-2xl font-mono text-emerald-400">+$8.42</div></div>
+                    <div class="bg-zinc-900/70 p-4 rounded-2xl"><div class="text-violet-400 text-[10px]">SPEED</div><div class="text-2xl font-mono">2.4s</div></div>`;
+                document.getElementById('swap-metrics').innerHTML = metricsHTML;
+                document.getElementById('swap-result').innerHTML = `You will receive <span class="font-bold">${outAmt.toFixed(6)}</span> ${to.symbol}`;
+                document.getElementById('execute-swap').classList.remove('hidden');
+            } catch (e) {
+                console.error('Swap error:', e);
+                document.getElementById('swap-metrics').innerHTML = `<div class="col-span-4 text-center text-amber-400">Quote unavailable (low liquidity)</div>`;
+            }
+        }
+
+        async function startTicker() {
+            const tickerEl = document.getElementById('ticker-content');
+            let html = '';
+            for (let i = 0; i < 3; i++) {
+                for (let t of tokens) {
+                    const p = await getPrice(t.address);
+                    html += `<span class="inline-flex items-center gap-2 mx-8">${t.icon} <span class="font-bold">${t.symbol}</span> <span class="text-emerald-400">$${p}</span></span>`;
+                }
+            }
+            tickerEl.innerHTML = html;
+        }
+
+        function copyWallet(addr) {
+            navigator.clipboard.writeText(addr);
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:12px 28px;border-radius:9999px;font-size:13px;';
+            toast.textContent = 'Wallet address copied!';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 1600);
+        }
+
+        async function init() {
+            console.log('🚀 Dashboard initializing...');
+            await renderTokenCards();
+            await renderMultiChart();
+            renderLiquidity();
+            await renderTopHolders();
+            populateSwaps();
+            await startTicker();
+            switchTab(0);
+
+            document.getElementById('from-token').addEventListener('change', updateSwapMetrics);
+            document.getElementById('to-token').addEventListener('change', updateSwapMetrics);
+            document.getElementById('swap-amount').addEventListener('input', updateSwapMetrics);
+            updateSwapMetrics();
+
+            document.getElementById('theme-toggle').addEventListener('click', () => document.documentElement.classList.toggle('dark'));
+            console.log('✅ Dashboard ready. Check console for API logs.');
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
